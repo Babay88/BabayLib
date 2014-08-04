@@ -1,0 +1,12 @@
+<component name="libraryTable">
+  <library name="apache-mime4j">
+    <CLASSES>
+      <root url="jar://$PROJECT_DIR$/libs/apache-mime4j-core-0.7.2.jar!/" />
+      <root url="jar://$PROJECT_DIR$/libs/httpclient-4.2.5.jar!/" />
+      <root url="jar://$PROJECT_DIR$/libs/httpcore-4.2.4.jar!/" />
+      <root url="jar://$PROJECT_DIR$/libs/httpmime-4.2.5.jar!/" />
+    </CLASSES>
+    <JAVADOC />
+    <SOURCES />
+  </library>
+</component>
