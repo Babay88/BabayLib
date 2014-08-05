@@ -28,6 +28,7 @@ import org.apache.http.protocol.HttpContext;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
+import ru.babay.lib.BugHandler;
 import ru.babay.lib.Settings;
 import ru.babay.lib.util.Util;
 
@@ -198,7 +199,7 @@ public abstract class MyJsonRequest implements Runnable {
                 debugData.append(String.format("responce time: %d ms, pure: %d ms\n", System.currentTimeMillis() - requestStartTime, endTime - startTime));
 
             if (logDebugData) {
-                Log.d(Settings.TAG, debugData.toString());
+                BugHandler.logD(debugData.toString());
             }
 
 
@@ -224,8 +225,8 @@ public abstract class MyJsonRequest implements Runnable {
 
         } catch (Exception e) {
             if (logDebugData) {
-                Log.d(Settings.TAG, String.format("responce time: %d ms\n", System.currentTimeMillis() - requestStartTime));
-                Log.e(Settings.TAG, String.format("%s, request: %s %s\n", e.getMessage(), mRequestType.toString(), debugData.toString()), e);
+                BugHandler.logD(String.format("responce time: %d ms\n", System.currentTimeMillis() - requestStartTime));
+                BugHandler.logE(String.format("%s, request: %s %s\n", e.getMessage(), mRequestType.toString(), debugData.toString()), e);
             }
 
             if (e instanceof SocketException)
@@ -285,7 +286,7 @@ public abstract class MyJsonRequest implements Runnable {
             requestDetails = path + paramsToString(params);
 
             if (debug)
-                Log.d(Settings.TAG, debugData.toString());
+                BugHandler.logD(debugData.toString());
         }
 
         ResponseHandler responseHandler = new BasicResponseHandler();
@@ -425,7 +426,7 @@ public abstract class MyJsonRequest implements Runnable {
         if (debugData != null) {
             for (Header h : request.getAllHeaders())
                 debugData.append(String.format("%s: %s\n", h.getName(), h.getValue()));
-            Log.d(Settings.TAG, debugData.toString());
+            BugHandler.logD(debugData.toString());
         }
 
         ResponseHandler responseHandler = new BasicResponseHandler();

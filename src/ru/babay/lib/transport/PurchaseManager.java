@@ -128,13 +128,12 @@ public class PurchaseManager {
                         // and pass in the token to retrieve more items
                     }
                 } catch (DeadObjectException e){
-                    Log.e(Settings.TAG, e.getMessage(), e);
+                    BugHandler.logE(e);
                     iAmDead = true;
                 }
                 catch (RemoteException e) {
-                    Log.e(Settings.TAG, e.getMessage(), e);
-                    if (!Settings.DEBUG)
-                        BugHandler.sendException(e);
+                    BugHandler.logE(e);
+                    BugHandler.sendException(e);
                 }
                 return null;
             }
@@ -157,7 +156,7 @@ public class PurchaseManager {
                 try {
                     return mService.consumePurchase(3, activity.getPackageName(), item.getPurchaseToken());
                 } catch (RemoteException e) {
-                    Log.e(Settings.TAG, e.getMessage(), e);
+                    BugHandler.logE(e);
                 }
                 return -1;
             }
@@ -183,14 +182,12 @@ public class PurchaseManager {
                     REQUEST_CODE, new Intent(), 0, 0, 0);
             return true;
         } catch (RemoteException e) {
-            Log.e(Settings.TAG, e.getMessage(), e);
-            if (!Settings.DEBUG)
-                BugHandler.sendException(e);
+            BugHandler.logE(e);
+            BugHandler.sendException(e);
             return false;
         } catch (IntentSender.SendIntentException e) {
-            Log.e(Settings.TAG, e.getMessage(), e);
-            if (!Settings.DEBUG)
-                BugHandler.sendException(e);
+            BugHandler.logE(e);
+            BugHandler.sendException(e);
             return false;
         }
     }
@@ -216,9 +213,8 @@ public class PurchaseManager {
                         item.setPrice(sourceItem.getPrice());
                     onItemBought(item);
                 } catch (JSONException e) {
-                    Log.e(Settings.TAG, e.getMessage(), e);
-                    if (!Settings.DEBUG)
-                        BugHandler.sendException(e);
+                    BugHandler.logE(e);
+                    BugHandler.sendException(e);
                 }
             } else {
                 onBuyItemCancelled();
@@ -314,7 +310,7 @@ public class PurchaseManager {
                     }
                 } catch (RemoteException e) {
                 } catch (JSONException e) {
-                    Log.e(Settings.TAG, e.getMessage(), e);
+                    BugHandler.logE(e);
                     if (managerListener != null)
                         managerListener.onErrorUpdating(e);
                 }

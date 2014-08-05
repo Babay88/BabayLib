@@ -25,6 +25,7 @@ import android.view.View;
 import android.widget.TextView;
 import org.xml.sax.Attributes;
 import org.xml.sax.XMLReader;
+import ru.babay.lib.BugHandler;
 import ru.babay.lib.R;
 import ru.babay.lib.Settings;
 import ru.babay.lib.model.Image;
@@ -146,8 +147,7 @@ public class HtmlViewFixTouchConsume extends TextView {
                 return linkHit;
             return res;
         } catch (ActivityNotFoundException e) {
-            if (Settings.DEBUG)
-                Log.w(Settings.TAG, e.getMessage(), e);
+            BugHandler.logD(e);
             return false;
         }
     }
@@ -190,8 +190,7 @@ public class HtmlViewFixTouchConsume extends TextView {
 
             }
         } catch (Exception e) {
-            if (Settings.DEBUG)
-                Log.e(Settings.TAG, e.getMessage(), e);
+            BugHandler.logD(e);
         }
 
         setText(strBuilder);

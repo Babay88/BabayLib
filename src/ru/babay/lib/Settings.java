@@ -8,7 +8,5 @@ package ru.babay.lib;
  * To change this template use File | Settings | File Templates.
  */
 public class Settings {
-    public static boolean DEBUG = true;
     public static boolean MEMCACHE_ENABLED = true;
-    public static String TAG = "BabayLib";
 }

@@ -2,6 +2,7 @@ package ru.babay.lib.transport;
 
 import android.content.Context;
 import android.util.Log;
+import ru.babay.lib.BugHandler;
 import ru.babay.lib.Settings;
 import ru.babay.lib.util.FileHelper;
 import ru.babay.lib.util.Util;
@@ -99,8 +100,8 @@ public class CachedFile implements Runnable {
                 return;
         }
 
-        if (Settings.DEBUG)
-            Log.d(Settings.TAG, "loading file: " + urlStr);
+        BugHandler.logD("loading file: " + urlStr);
+
         long timeStart = System.currentTimeMillis();
 
         try {
@@ -116,8 +117,7 @@ public class CachedFile implements Runnable {
             //byte [] newFileBytes = downloadStream.toByteArray();
             //downloadStream.reset();
 
-            if (Settings.DEBUG)
-                Log.d(Settings.TAG, String.format("loaded file: %s, %d ms", url, System.currentTimeMillis() - timeStart));
+            BugHandler.logD(String.format("loaded file: %s, %d ms", url, System.currentTimeMillis() - timeStart));
 
             //byte oldFileBytes[] = null;
 

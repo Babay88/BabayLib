@@ -9,6 +9,7 @@ import android.os.Environment;
 import android.util.DisplayMetrics;
 import android.util.Log;
 import org.json.JSONArray;
+import ru.babay.lib.BugHandler;
 import ru.babay.lib.Settings;
 import ru.babay.lib.transport.ImageCache;
 import ru.babay.lib.transport.TTL;
@@ -441,7 +442,7 @@ public class Util {
             if ("8".equals(exifOrientation))
                 return 270;
         } catch (IOException e) {
-            Log.e(Settings.TAG, e.getMessage(), e);
+            BugHandler.logE(e);
         }
         return 0;
     }

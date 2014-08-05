@@ -12,6 +12,8 @@ public abstract class BugHandler {
 
     static BugHandler handlerInstance;
 
+    public enum LogLevel {Debug, Warning, Error}
+
     public static void sendException(Exception e) {
         if (handlerInstance != null)
             handlerInstance.sendExceptionImp(e);
@@ -27,6 +29,31 @@ public abstract class BugHandler {
             handlerInstance.sendExceptionMessageImp(exception, message, error);
     }
 
+    public static void logE(Throwable e) {
+        if (handlerInstance != null)
+            handlerInstance.logInt(LogLevel.Error, null, e);
+    }
+
+    public static void logE(String message, Throwable e) {
+        if (handlerInstance != null)
+            handlerInstance.logInt(LogLevel.Error, message, e);
+    }
+
+    public static void logW(Throwable e) {
+        if (handlerInstance != null)
+            handlerInstance.logInt(LogLevel.Warning, null, e);
+    }
+
+    public static void logD(Throwable e) {
+        if (handlerInstance != null)
+            handlerInstance.logInt(LogLevel.Debug, null, e);
+    }
+
+    public static void logD(String message) {
+        if (handlerInstance != null)
+            handlerInstance.logInt(LogLevel.Debug, message, null);
+    }
+
     public static void setHandlerInstance(BugHandler handlerInstance) {
         BugHandler.handlerInstance = handlerInstance;
     }
@@ -36,4 +63,6 @@ public abstract class BugHandler {
     protected abstract void sendExceptionMapImp(HashMap<String, String> debugMap, Exception error);
 
     protected abstract void sendExceptionMessageImp(String exception, String message, Exception error);
+
+    protected abstract void logInt(LogLevel level, String message, Throwable e);
 }

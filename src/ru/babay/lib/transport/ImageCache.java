@@ -8,6 +8,7 @@ import android.graphics.Point;
 import android.os.Build;
 import android.support.v4.util.LruCache;
 import android.util.Log;
+import ru.babay.lib.BugHandler;
 import ru.babay.lib.Settings;
 import ru.babay.lib.model.Image;
 import ru.babay.lib.util.CacheCleanup;
@@ -200,8 +201,7 @@ public class ImageCache {
             addBitmapToMemoryCache(url, b, loadParams);
             return b;
         } catch (IOException e) {
-            if (Settings.DEBUG)
-                Log.e(Settings.TAG, e.getMessage(), e);
+            BugHandler.logD(e);
             return null;
         }
     }
@@ -386,8 +386,7 @@ public class ImageCache {
                     if (cachedFile.isAborted())
                         return;
                     if (detectBlack && detectBlack(bm)) {
-                        if (Settings.DEBUG)
-                            Log.e(Settings.TAG, String.format("Black image loaded, url: %s, path: %s, retryCount: %d", url, file.getPath(), retryCount));
+                        BugHandler.logD(String.format("Black image loaded, url: %s, path: %s, retryCount: %d", url, file.getPath(), retryCount));
 
                         if (retryCount == 0 || retryCount == 2) {
                             retryCount = 1;
@@ -405,10 +404,10 @@ public class ImageCache {
                         receiver.onBitmapReceived(bm);
                     }
                 } catch (IOException e) {
-                    Log.w(Settings.TAG, e.getMessage(), e);
+                    BugHandler.logW(e);
                     receiver.onFail(e);
                 } catch (OutOfMemoryError e) {
-                    Log.w(Settings.TAG, e.getMessage(), e);
+                    BugHandler.logW(e);
                     receiver.onFail(e);
                 }
         }

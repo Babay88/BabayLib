@@ -19,6 +19,7 @@ import android.view.animation.AlphaAnimation;
 import android.view.animation.Animation;
 import android.widget.LinearLayout;
 import android.widget.RelativeLayout;
+import ru.babay.lib.BugHandler;
 import ru.babay.lib.R;
 import ru.babay.lib.Settings;
 import ru.babay.lib.transport.CachedFile;
@@ -344,9 +345,8 @@ public class LoadableImageView extends ImageView {
             if (item == sourceItem) {
                 if (ImageCache.detectBlack(bm)) {
                     if (retryCount == 0) {
-                        if (Settings.DEBUG)
-                            Log.e(Settings.TAG, String.format("image loaded as black, url: %s, path: %s",
-                                    mImage.getUrl(), ImageCache.getPath(getContext(), mImage)));
+                        BugHandler.logD(String.format("image loaded as black, url: %s, path: %s",
+                                mImage.getUrl(), ImageCache.getPath(getContext(), mImage)));
                         postLoadImage(1000, 1);
                     } else if (retryCount == 1) {
                         ImageCache.clear(getContext(), mImage);
@@ -447,8 +447,7 @@ public class LoadableImageView extends ImageView {
             if (bmHeight > bmWidth) {
                 h = width * 2 / 3;
                 setScaleType(ScaleType.CENTER_CROP);
-            }
-                else h = Math.round(width * bmHeight / (float)bmWidth);
+            } else h = Math.round(width * bmHeight / (float) bmWidth);
             if (hMode == View.MeasureSpec.AT_MOST) {
                 h = Math.min(h, hSize);
             }
