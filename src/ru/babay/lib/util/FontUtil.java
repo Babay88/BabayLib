@@ -20,9 +20,12 @@ public class FontUtil {
         sTypeface = typeface;
     }
 
-    public static void init(Context context){
-        if (sTypeface == null)
-            FontUtil.sTypeface = Typeface.createFromAsset(context.getAssets(), "font/pt_sans.ttc");
+    public static void init(Context context, String fontPath){
+        if (sTypeface == null){
+            try {
+                FontUtil.sTypeface = Typeface.createFromAsset(context.getAssets(), fontPath);
+            } catch (RuntimeException e){}
+        }
     }
 
     public static void applyFont(View view){

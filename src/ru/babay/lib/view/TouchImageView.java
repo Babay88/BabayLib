@@ -18,13 +18,11 @@ package ru.babay.lib.view;
 import android.content.Context;
 import android.graphics.Matrix;
 import android.graphics.PointF;
-import android.graphics.Rect;
 import android.graphics.RectF;
 import android.graphics.drawable.Drawable;
 import android.util.AttributeSet;
 import android.view.MotionEvent;
 import android.view.ScaleGestureDetector;
-import ru.babay.lib.view.LoadableImageView;
 
 public class TouchImageView extends LoadableImageView {
 

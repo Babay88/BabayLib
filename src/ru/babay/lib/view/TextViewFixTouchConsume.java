@@ -65,7 +65,6 @@ public class TextViewFixTouchConsume extends TextView {
                     setTextViewHTML(mHtml);
                 }
             });
-
         }
     };
 

@@ -1,9 +1,15 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <attr name="drawableLeft" format="reference"/>
+    <attr name="drawableTop" format="reference"/>
+    <attr name="drawableRight" format="reference"/>
+    <attr name="drawableBottom" format="reference"/>
+
     <declare-styleable name="CompoundButton">
         <attr name="button" format="reference"/>
         <attr name="checked" format="boolean"/>
     </declare-styleable>
+
     <declare-styleable name="FlowLayout">
         <attr name="horizontalSpacing" format="dimension"/>
         <attr name="verticalSpacing" format="dimension"/>
@@ -13,12 +19,31 @@
         </attr>
         <attr name="debugDraw" format="boolean" />
     </declare-styleable>
+
     <declare-styleable name="FlowLayout_LayoutParams">
         <attr name="layout_newLine" format="boolean"/>
         <attr name="layout_horizontalSpacing" format="dimension"/>
         <attr name="layout_verticalSpacing" format="dimension"/>
     </declare-styleable>
+
     <declare-styleable name="LoadableImageView">
         <attr name="overlayDrawable" format="reference"/>
+    </declare-styleable>
+
+    <declare-styleable name="OverlayedImageButton">
+        <attr name="drawableLeft"/>
+        <attr name="drawableTop"/>
+        <attr name="drawableRight"/>
+        <attr name="drawableBottom"/>
+
+        <attr name="drawableLeftSize" format="dimension"/>
+        <attr name="drawableTopSize" format="dimension"/>
+        <attr name="drawableRightSize" format="dimension"/>
+        <attr name="drawableBottomSize" format="dimension"/>
+    </declare-styleable>
+
+    <declare-styleable name="OverlayedTextView">
+        <attr name="drawableLeft"/>
+        <attr name="drawableRight"/>
     </declare-styleable>
 </resources>

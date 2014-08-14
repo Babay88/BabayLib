@@ -14,12 +14,12 @@
       <sourceFolder url="file://$MODULE_DIR$/src" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/gen" isTestSource="false" generated="true" />
     </content>
-    <orderEntry type="inheritedJdk" />
+    <orderEntry type="jdk" jdkName="Android API 19 Platform" jdkType="Android SDK" />
     <orderEntry type="sourceFolder" forTests="false" />
     <orderEntry type="library" name="android-support-v4" level="project" />
     <orderEntry type="library" name="tagsoup-1.2.1" level="project" />
-    <orderEntry type="library" name="apache-mime4j" level="project" />
-    <orderEntry type="library" name="twitter4j (2)" level="project" />
+    <orderEntry type="library" name="apache-http" level="project" />
+    <orderEntry type="library" name="twitter4j-core" level="project" />
   </component>
 </module>
 

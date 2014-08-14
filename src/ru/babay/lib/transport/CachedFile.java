@@ -8,10 +8,7 @@ import ru.babay.lib.util.FileHelper;
 import ru.babay.lib.util.Util;
 import ru.babay.lib.util.WorkerThread;
 
-import java.io.File;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.InputStream;
+import java.io.*;
 import java.net.MalformedURLException;
 import java.net.URL;
 
@@ -25,6 +22,8 @@ import java.net.URL;
  * To change this template use File | Settings | File Templates.
  */
 public class CachedFile implements Runnable {
+    public enum Status {None, Started, Stopped, Completed, Aborted}
+
     Context context;
     String path;
     String urlStr;
@@ -34,10 +33,9 @@ public class CachedFile implements Runnable {
     boolean dontRefresh;
     TTL ttl = TTL.Day;
     boolean useExternalStorage;
-    boolean aborted;
     InputStream responseStream;
     FileOutputStream outFile;
-
+    Status status = Status.None;
 
     public CachedFile(Context context, String path, String url, TTL ttl, CachedFileListener listener) {
         this.context = context;
@@ -77,27 +75,22 @@ public class CachedFile implements Runnable {
         return file.exists() ? file : null;
     }
 
-    /*public static File getWebViewFile(Context context, String url) {
-        String hashCode = String.format("%08x", url.hashCode());
-        File file = new File(new File(context.getCacheDir(), "webviewCache"), hashCode);
-        return file.exists() ? file : null;
-    }*/
-
-
-
     @Override
     public void run() {
-        if (aborted)
+        if (status != Status.None) {
             return;
-        File /*file = getWebViewFile(context, urlStr);
-        if (file == null)*/
-            file = Util.makePathAndGetFile(context, path, useExternalStorage);
+        }
+        status = Status.Started;
+
+        File file = Util.makePathAndGetFile(context, path, useExternalStorage);
 
         boolean alreadyHaveFile = file.exists() && !forceUpdate;
         if (alreadyHaveFile) {
             listener.onGotFile(file, this);
-            if (!shouldUpdate(file))
+            if (!shouldUpdate(file)) {
+                status = Status.Completed;
                 return;
+            }
         }
 
         BugHandler.logD("loading file: " + urlStr);
@@ -109,44 +102,26 @@ public class CachedFile implements Runnable {
 
             responseStream = url.openConnection().getInputStream();
 
-            //ByteArrayOutputStream downloadStream = new ByteArrayOutputStream();
-
             outFile = new FileOutputStream(file);
             FileHelper.copyFile(responseStream, outFile);
             outFile.close();
-            //byte [] newFileBytes = downloadStream.toByteArray();
-            //downloadStream.reset();
 
             BugHandler.logD(String.format("loaded file: %s, %d ms", url, System.currentTimeMillis() - timeStart));
 
-            //byte oldFileBytes[] = null;
-
-            /*if (file.exists()){
-                FileInputStream oldFileStream = new FileInputStream(file);
-                oldFileBytes = new byte[oldFileStream.available()];
-                oldFileStream.read(oldFileBytes, 0, oldFileBytes.length);
-                oldFileStream.close();
-            }*/
-
-            /*if (!Arrays.equals(newFileBytes, oldFileBytes)){
-                FileOutputStream outFile = new FileOutputStream(file);
-                outFile.write(newFileBytes);
-                outFile.flush();
-                outFile.close();
-                if (alreadyHaveFile)
-                    listener.onUpdateFile(file);
-                else
-                    listener.onGotFile(file);
-            } else*/
-            listener.onGotFile(file, this);
-            file.setLastModified(System.currentTimeMillis());
+            if (status != Status.Aborted) {
+                status = Status.Completed;
+                file.setLastModified(System.currentTimeMillis());
+                listener.onGotFile(file, this);
+            }
             //if (!alreadyHaveFile)
             //    listener.onGotFile(file);
 
-        } catch (MalformedURLException e) {
+        } catch (MalformedURLException | SecurityException | NullPointerException e) {
+            status = Status.Stopped;
             listener.onError(e, this);
         } catch (IOException e) {
-            if (aborted && file != null && file.exists())
+            status = Status.Stopped;
+            if (status == Status.Aborted && file != null && file.exists())
                 file.delete();
             try {
                 outFile.close();
@@ -161,21 +136,24 @@ public class CachedFile implements Runnable {
     }
 
     public void abort() {
-        aborted = true;
-        if (responseStream != null)
-            WorkerThread.getInstance().post(new Runnable() {
-                @Override
-                public void run() {
+        if (status == Status.Stopped || status == Status.Completed || status == Status.Aborted)
+            return;
+        status = Status.Aborted;
+        WorkerThread.getInstance().post(new Runnable() {
+            @Override
+            public void run() {
+                if (responseStream != null)
                     try {
                         responseStream.close();
-                    } catch (Throwable e) {
+                    } catch (IOException e) {
                     }
-                }
-            });
+            }
+        });
+
     }
 
     public boolean isAborted() {
-        return aborted;
+        return status == Status.Aborted;
     }
 
     public static interface CachedFileListener {

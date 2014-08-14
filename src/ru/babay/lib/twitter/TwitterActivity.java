@@ -34,6 +34,7 @@ public class TwitterActivity extends Activity {
     public static final String TOKEN_TAG = "ru.babay.tw.token";
     public static final String TOKEN_SECRET_TAG = "ru.babay.tw.token_secret";
     public static final String VERIFIER_TAG = "ru.babay.tw.verifier";
+    public static final String RETRIVE_TOKEN = "ru.babay.tw.retriveToken";
     static twitter4j.Twitter mTwitter;
 
     static final int TW_BLUE = 0xFFC0DEED;
@@ -49,6 +50,7 @@ public class TwitterActivity extends Activity {
 
     private String mUrl;
     private RequestToken mRequestToken;
+    boolean retriveToken;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -69,10 +71,13 @@ public class TwitterActivity extends Activity {
 
         setContentView(mContent);
 
+        Intent intent = getIntent();
+        retriveToken = intent.getBooleanExtra(RETRIVE_TOKEN, false);
+
         retrieveRequestToken();
     }
 
-    boolean loadParams(){
+    boolean loadParams() {
         Intent intent = getIntent();
         mIcon = intent.getIntExtra(ICON_TAG, 0);
         return true;
@@ -138,6 +143,8 @@ public class TwitterActivity extends Activity {
             @Override
             public void run() {
                 try {
+                    if (mTwitter == null)
+                        mTwitter = TwitterB.getTwitterInstance();
                     mRequestToken = mTwitter.getOAuthRequestToken(TwitterB.CALLBACK_URI);
                     mWebView.loadUrl(mUrl = mRequestToken.getAuthorizationURL());
                 } catch (TwitterException e) {
@@ -150,7 +157,21 @@ public class TwitterActivity extends Activity {
     private void retrieveAccessToken(final String url) {
         final Uri uri = Uri.parse(url);
         final String verifier = uri.getQueryParameter("oauth_verifier");
-        resultOk(mRequestToken.getToken(), mRequestToken.getTokenSecret(), verifier);
+        if (!retriveToken)
+            resultOk(mRequestToken.getToken(), mRequestToken.getTokenSecret(), verifier);
+        else {
+            new Thread() {
+                @Override
+                public void run() {
+                    try {
+                        AccessToken at = mTwitter.getOAuthAccessToken(mRequestToken, verifier);
+                        resultOk(at.getToken(), at.getTokenSecret(), null);
+                    } catch (TwitterException e) {
+                        resultError(new TwitterError(e.getMessage()));
+                    }
+                }
+            }.start();
+        }
         //final String token = uri.getQueryParameter("oauth_token");
         //mSpinner.show();
         /*new Thread() {
@@ -193,10 +214,11 @@ public class TwitterActivity extends Activity {
         @Override
         public void onPageStarted(WebView view, String url, Bitmap favicon) {
             super.onPageStarted(view, url, favicon);
-            try{
-            if (!mSpinner.isShowing())
-                mSpinner.show();
-            }catch (Exception e){}
+            try {
+                if (!mSpinner.isShowing())
+                    mSpinner.show();
+            } catch (Exception e) {
+            }
         }
 
         @Override
@@ -209,7 +231,8 @@ public class TwitterActivity extends Activity {
             try {
                 if (mSpinner.isShowing())
                     mSpinner.dismiss();
-            } catch (Exception ignored) {}
+            } catch (Exception ignored) {
+            }
         }
     }
 }

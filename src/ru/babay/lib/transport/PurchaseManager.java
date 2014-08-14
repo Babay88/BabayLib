@@ -4,13 +4,11 @@ import android.app.Activity;
 import android.app.PendingIntent;
 import android.content.*;
 import android.os.*;
-import android.util.Log;
 import com.android.vending.billing.IInAppBillingService;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 import ru.babay.lib.BugHandler;
-import ru.babay.lib.Settings;
 import ru.babay.lib.model.PurchaseItem;
 import ru.babay.lib.util.Util;
 

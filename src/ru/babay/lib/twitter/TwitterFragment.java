@@ -5,7 +5,6 @@ import android.graphics.Bitmap;
 import android.graphics.Color;
 import android.graphics.Typeface;
 import android.graphics.drawable.Drawable;
-import android.net.Uri;
 import android.os.Bundle;
 import android.support.v4.app.DialogFragment;
 import android.util.Log;
@@ -121,14 +120,14 @@ public class TwitterFragment extends DialogFragment {
 
     private void retrieveAccessToken(String url) {
         mSpinner.show();
-        final Uri uri = Uri.parse(url);
-        final String verifier = uri.getQueryParameter("oauth_verifier");
+        //final Uri uri = Uri.parse(url);
+        //final String verifier = uri.getQueryParameter("oauth_verifier");
         new Thread() {
             @Override
             public void run() {
                 try {
-                    AccessToken at = mTwitter.getOAuthAccessToken(mRequestToken, verifier);
-                    mListener.onComplete(at.getToken(), at.getTokenSecret(), verifier);
+                    AccessToken at = mTwitter.getOAuthAccessToken(mRequestToken);
+                    mListener.onComplete(at.getToken(), at.getTokenSecret(), null);
                 } catch (TwitterException e) {
                     mListener.onError(new TwitterError(e.getMessage()));
                 }

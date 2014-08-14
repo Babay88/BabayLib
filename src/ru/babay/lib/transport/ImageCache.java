@@ -7,7 +7,6 @@ import android.graphics.Color;
 import android.graphics.Point;
 import android.os.Build;
 import android.support.v4.util.LruCache;
-import android.util.Log;
 import ru.babay.lib.BugHandler;
 import ru.babay.lib.Settings;
 import ru.babay.lib.model.Image;
@@ -28,6 +27,12 @@ public class ImageCache {
     private static LruCache<String, Bitmap> mMemoryCache;
     private static final Object mMemCacheSync = new Object();
     static OutOfStorageListener outOfStorageListener;
+
+    private static boolean isImageCacheExternal = false;
+
+    public static void setImageCacheExternal(boolean imageCacheExternal) {
+        isImageCacheExternal = imageCacheExternal;
+    }
 
     public static void setOutOfStorageListener(OutOfStorageListener outOfStorageListener) {
         ImageCache.outOfStorageListener = outOfStorageListener;
@@ -52,7 +57,7 @@ public class ImageCache {
                         return bitmap.getRowBytes() * bitmap.getHeight() / 1024;
                     try {
                         return bitmap.getAllocationByteCount() / 1024;
-                    } catch (Exception e) {
+                    } catch (Exception e){
                         return bitmap.getRowBytes() * bitmap.getHeight() / 1024;
                     }
                 }
@@ -128,10 +133,10 @@ public class ImageCache {
     }
 
     static void addBitmapToMemoryCache(String key, Bitmap bitmap) {
-        if (key == null || bitmap == null)
-            return;
         if (mMemoryCache == null)
             initMemCache();
+        if (key == null || bitmap == null)
+            return;
         synchronized (mMemCacheSync) {
             if (mMemoryCache.get(key) == null) {
                 mMemoryCache.put(key, bitmap);
@@ -155,11 +160,7 @@ public class ImageCache {
         return builder.toString();
     }
 
-    private static boolean isImageCacheExternal = false;
 
-    public static void setImageCacheExternal(boolean imageCacheExternal) {
-        isImageCacheExternal = imageCacheExternal;
-    }
 
     public static Bitmap getImage(Context context, String url, TTL ttl) {
         return getImage(context, url, ttl, null, isImageCacheExternal);
@@ -190,11 +191,8 @@ public class ImageCache {
             return b;
 
         File file = CachedFile.getFile(context, getFilePath(Util.md5(url), ttl), isExternalStorage);
-        if (file == null) {
-            //file = CachedFile.getWebViewFile(context, url);
-            //if (file == null)
-                return null;
-        }
+        if (file == null)
+            return null;
 
         try {
             b = Util.getResizedBitmap(file, loadParams == null ? 0 : loadParams.maxWidth, loadParams == null ? 0 : loadParams.maxHeight);
@@ -261,7 +259,7 @@ public class ImageCache {
 
     public static CachedFile loadImage(Context context, String url, TTL ttl, LoadImageParams params, boolean detectBlack, boolean isExternal, BitmapReceiver receiver) {
         if (url == null || url.length() == 0) {
-            receiver.onFail(new Exception("no image to load"));
+            receiver.onFail(new Exception("no image to load"), null);
             return null;
         }
 
@@ -286,6 +284,10 @@ public class ImageCache {
 
     public static CachedFile loadImage(Context context, String url, TTL ttl, int maxWidth, boolean isExternal, BitmapReceiver receiver) {
         return loadImage(context, url, ttl, new LoadImageParams(maxWidth, 0), true, isExternal, receiver);
+    }
+
+    public static CachedFile loadImage(Context context, String url, TTL ttl, int maxWidth, BitmapReceiver receiver) {
+        return loadImage(context, url, ttl, new LoadImageParams(maxWidth, 0), true, isImageCacheExternal, receiver);
     }
 
     public static Point getImageSize(Context context, Image image) {
@@ -371,8 +373,8 @@ public class ImageCache {
         @Override
         public void onError(Throwable t, CachedFile cachedFile) {
             if (!cachedFile.isAborted())
-                receiver.onFail(t);
-            if (t instanceof IOException) {
+                receiver.onFail(t, downloader);
+            if (t instanceof IOException){
                 String message = t.getMessage();
                 if (outOfStorageListener != null && message != null && message.contains("space"))
                     outOfStorageListener.onOutOfStorage(context);
@@ -397,18 +399,18 @@ public class ImageCache {
                             download(this, 100);
                             //DataWorkerThreads.postToImageDownloadThreads(downloader);
                         } else {
-                            receiver.onBitmapReceived(bm);
+                            receiver.onBitmapReceived(bm, downloader);
                         }
                     } else {
                         addBitmapToMemoryCache(url, bm, params);
-                        receiver.onBitmapReceived(bm);
+                        receiver.onBitmapReceived(bm, downloader);
                     }
                 } catch (IOException e) {
                     BugHandler.logW(e);
-                    receiver.onFail(e);
+                    receiver.onFail(e, downloader);
                 } catch (OutOfMemoryError e) {
                     BugHandler.logW(e);
-                    receiver.onFail(e);
+                    receiver.onFail(e, downloader);
                 }
         }
     }
@@ -488,9 +490,9 @@ public class ImageCache {
     }
 
     public interface BitmapReceiver {
-        void onBitmapReceived(Bitmap bm);
+        void onBitmapReceived(Bitmap bm, CachedFile downloader);
 
-        void onFail(Throwable e);
+        void onFail(Throwable e, CachedFile downloader);
     }
 
     public static class LoadImageParams {

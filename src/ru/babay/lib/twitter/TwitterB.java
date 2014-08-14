@@ -38,6 +38,8 @@ public class TwitterB {
 
     private int mIcon;
     private twitter4j.Twitter mTwitter;
+    private static String consumerKey;
+    private static String consumerSecret;
 
     public static interface LoginListener {
         public void onComplete(String token, String token_secret, String verifier);
@@ -55,17 +57,30 @@ public class TwitterB {
         Configuration configuration = configurationBuilder.build();
         TwitterFactory twitterFactory = new TwitterFactory(configuration);
         mTwitter = twitterFactory.getInstance();
-
-
-        //mTwitter = new TwitterFactory().getInstance();
-        //mTwitter.setOAuthConsumer(consumerKey, consumerSecret);
+        TwitterB.consumerKey = consumerKey;
+        TwitterB.consumerSecret = consumerSecret;
     }
 
-    public void authorize(Context context, Fragment fragment, int requestCode){
+    public static Twitter getTwitterInstance(){
+        ConfigurationBuilder configurationBuilder = new ConfigurationBuilder();
+        configurationBuilder.setOAuthConsumerKey(consumerKey);
+        configurationBuilder.setOAuthConsumerSecret(consumerSecret);
+        configurationBuilder.setDebugEnabled(true);
+        Configuration configuration = configurationBuilder.build();
+        TwitterFactory twitterFactory = new TwitterFactory(configuration);
+        return twitterFactory.getInstance();
+    }
+
+    public void authorize(Context context, Fragment fragment, int requestCode, boolean retriveOAuthToken){
         Intent intent = new Intent(context, TwitterActivity.class);
         TwitterActivity.mTwitter = mTwitter;
         intent.putExtra(TwitterActivity.ICON_TAG, mIcon);
+        intent.putExtra(TwitterActivity.RETRIVE_TOKEN, retriveOAuthToken);
         fragment.startActivityForResult(intent, requestCode);
+    }
+
+    public void authorize(Context context, Fragment fragment, int requestCode){
+        authorize(context, fragment, requestCode, false);
     }
 
     public void authorize(Context context, FragmentManager fm, LoginListener listener){
@@ -83,6 +98,8 @@ public class TwitterB {
     }
 
     public static void receiveResult(int resultCode, Intent data, LoginListener callback){
+        //Note! twitter do not expire!
+
         if (resultCode == Activity.RESULT_OK){
             callback.onComplete(data.getStringExtra(TwitterActivity.TOKEN_TAG),
                     data.getStringExtra(TwitterActivity.TOKEN_SECRET_TAG),

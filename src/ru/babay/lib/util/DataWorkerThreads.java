@@ -59,12 +59,12 @@ public class DataWorkerThreads {
         if (delay == 0)
             getInstance().mImageDownloadThreads.run(runnable);
         else
-        getInstance().delayHandler.postDelayed(new Runnable() {
-            @Override
-            public void run() {
-                getInstance().mImageDownloadThreads.run(runnable);
-            }
-        }, delay);
+            getInstance().delayHandler.postDelayed(new Runnable() {
+                @Override
+                public void run() {
+                    getInstance().mImageDownloadThreads.run(runnable);
+                }
+            }, delay);
     }
 
     public static void postToImageLoadThread(Runnable runnable) {
@@ -111,5 +111,9 @@ public class DataWorkerThreads {
 
     public void postDelayed(Runnable r, long delay) {
         delayHandler.postDelayed(r, delay);
+    }
+
+    public static void postToImageThreadsS(Runnable runnable) {
+        postToImageDownloadThreads(runnable);
     }
 }

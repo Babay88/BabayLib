@@ -6,12 +6,10 @@ import android.content.res.TypedArray;
 import android.graphics.Bitmap;
 import android.graphics.Canvas;
 import android.graphics.Point;
-import android.graphics.Rect;
 import android.graphics.drawable.Drawable;
 import android.os.Build;
 import android.os.Handler;
 import android.util.AttributeSet;
-import android.util.Log;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.ViewParent;
@@ -21,11 +19,10 @@ import android.widget.LinearLayout;
 import android.widget.RelativeLayout;
 import ru.babay.lib.BugHandler;
 import ru.babay.lib.R;
-import ru.babay.lib.Settings;
+import ru.babay.lib.model.Image;
 import ru.babay.lib.transport.CachedFile;
 import ru.babay.lib.transport.ImageCache;
 import ru.babay.lib.transport.TTL;
-import ru.babay.lib.model.Image;
 
 /**
  * Created with IntelliJ IDEA.
@@ -40,6 +37,7 @@ public class LoadableImageView extends ImageView {
     protected boolean download;
     protected boolean loadFired;
     protected int bmWidth, bmHeight;
+    protected boolean fitHeight;
     protected boolean fitWidth;
     protected int maxImageHeight;
     protected boolean cropHeight;
@@ -81,17 +79,11 @@ public class LoadableImageView extends ImageView {
 
     public void clearImage() {
         abortDownload();
-        /*Drawable dr = getDrawable();
-        if (dr instanceof BitmapDrawable) {
-            Bitmap b = ((BitmapDrawable) dr).getBitmap();
-            if (b != null)
-                b.recycle();
-        } */
         setImageDrawable(null);
     }
 
-    void abortDownload() {
-        if (imageDownloadHandler != null) {
+    void abortDownload(){
+        if (imageDownloadHandler != null){
             imageDownloadHandler.abort();
             imageDownloadHandler = null;
             hideProgress(loaderId, loaderView);
@@ -105,17 +97,47 @@ public class LoadableImageView extends ImageView {
         loadFired = false;
     }
 
+    public void setImageUrlAndLoad(Object sourceItem, String url, TTL ttl, int defDrawableId, boolean download){
+        setImageUrlAndLoad(sourceItem, url, ttl, 0, defDrawableId, download);
+    }
+
+    public void setImageUrlAndLoad(Object sourceItem, String url, TTL ttl, int loaderId, int defDrawableId, boolean download){
+        setImageUrl(sourceItem, url, ttl);
+        this.defDrawableId = defDrawableId;
+        this.loaderId = loaderId;
+        this.download = download;
+        loadImage(false);
+    }
+
     public void setImage(Object sourceItem, Image image) {
         abortDownload();
         this.sourceItem = sourceItem;
         mImage = image;
         loadFired = false;
+        fitHeight = false;
         fitWidth = false;
         bmWidth = bmHeight = 0;
     }
 
     public Image getImage() {
         return mImage;
+    }
+
+    public void setFitHeight(boolean fitHeight) {
+        if (fitHeight) {
+            if (mImage.getWidth() != 0 && mImage.getHeight() != 0) {
+                bmWidth = mImage.getWidth();
+                bmHeight = mImage.getHeight();
+                this.fitHeight = true;
+            } else {
+                Point pt = ImageCache.getImageSize(getContext(), mImage);
+                if (pt != null) {
+                    this.fitHeight = fitHeight;
+                    bmWidth = pt.x;
+                    bmHeight = pt.y;
+                }
+            }
+        } else this.fitHeight = false;
     }
 
     public void setFitWidth(boolean fitWidth) {
@@ -151,35 +173,6 @@ public class LoadableImageView extends ImageView {
             }
         }
     }
-
-    /*public void setLimitHeightWithWidth(boolean limitHeightWithWidth) {
-        this.limitHeightWithWidth = limitHeightWithWidth;
-        if (limitHeightWithWidth){
-            if (mImage.getWidth() != 0 && mImage.getHeight() != 0) {
-                bmWidth = mImage.getWidth();
-                bmHeight = mImage.getHeight();
-            } else {
-                Point pt = ImageCache.getImageSize(getContext(), mImage);
-                if (pt != null) {
-                    bmWidth = pt.x;
-                    bmHeight = pt.y;
-                }
-            }
-        }
-    } */
-
-    /*public void loadImage() {
-        ViewGroup.LayoutParams lp = getLayoutParams();
-        ImageCache.LoadImageParams loadParams = new ImageCache.LoadImageParams();
-        if (lp != null) {
-            if (lp.width > 0)
-                loadParams.maxWidth = lp.width;
-            if (lp.height > 0)
-                loadParams.maxHeight = lp.height;
-        }
-
-        loadImage(loadParams);
-    } */
 
     public void loadImage(int limitMult) {
         retryCount = 0;
@@ -234,17 +227,16 @@ public class LoadableImageView extends ImageView {
         }
 
         Bitmap b = ImageCache.getBitmapFromMemCache(mImage.getUrl(), loadParams.maxWidth, loadParams.maxHeight);
-        if (b != null) {
+        if (b != null){
             setImageBitmap(b);
+            hideProgress(loaderId, loaderView);
             return;
         }
 
         if (getDrawable() == null)
             showLoader(loaderId);
-        //setImageDrawable(null);
 
         if (download || isCached()) {
-            //showLoader(loaderId);
             ImageReceiver receiver = new ImageReceiver(sourceItem, loaderId, defDrawableId);
             imageDownloadHandler = ImageCache.loadImage(getContext(), mImage, loadParams, false, receiver);
         } else {
@@ -280,15 +272,11 @@ public class LoadableImageView extends ImageView {
 
         ViewParent parent = getParent();
 
-        //setVisibility(INVISIBLE);
-
         if (id != 0) {
             View progress = ((ViewGroup) parent).findViewById(id);
             progress.setVisibility(View.VISIBLE);
             if (parent instanceof LinearLayout)
                 setVisibility(View.GONE);
-            //else if (parent instanceof RelativeLayout)
-            //    view.setVisibility(INVISIBLE);
             return loaderView = progress;
         }
 
@@ -340,7 +328,7 @@ public class LoadableImageView extends ImageView {
         }
 
         @Override
-        public void onBitmapReceived(final Bitmap bm) {
+        public void onBitmapReceived(final Bitmap bm, CachedFile downloader) {
             imageDownloadHandler = null;
             if (item == sourceItem) {
                 if (ImageCache.detectBlack(bm)) {
@@ -374,7 +362,7 @@ public class LoadableImageView extends ImageView {
         }
 
         @Override
-        public void onFail(Throwable e) {
+        public void onFail(Throwable e, CachedFile downloader) {
             imageDownloadHandler = null;
             if (item == sourceItem)
                 handler.post(new Runnable() {
@@ -401,7 +389,7 @@ public class LoadableImageView extends ImageView {
         }
     }
 
-    void postHideProgress(final int loaderId, final View loaderView) {
+    void postHideProgress(final int loaderId, final View loaderView){
         post(new Runnable() {
             @Override
             public void run() {
@@ -426,6 +414,16 @@ public class LoadableImageView extends ImageView {
 
         final int hSize = View.MeasureSpec.getSize(heightMeasureSpec);
         final int width = getMeasuredWidth();
+
+        if (fitHeight && bmHeight != 0 && bmWidth != 0 && getDrawable() == null) {
+            int h = width * bmHeight / bmWidth;
+            if (hMode == View.MeasureSpec.AT_MOST)
+                h = Math.min(h, hSize);
+            if (h != getMeasuredHeight())
+                setMeasuredDimension(width, h);
+
+            return;
+        }
 
         int h = 0;
         int w = width;
@@ -459,7 +457,6 @@ public class LoadableImageView extends ImageView {
             if (h != getMeasuredHeight())
                 setMeasuredDimension(w, h);
         }
-
     }
 
     public void setOverlayDrawable(Drawable overlayDrawable) {

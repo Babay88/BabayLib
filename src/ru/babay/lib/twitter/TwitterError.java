@@ -6,7 +6,7 @@ public class TwitterError extends Throwable {
 
 	private int mErrorCode = 0;
 	private String mErrorType;
-	
+
 	public TwitterError(String message) {
 		super(message);
 	}
@@ -24,5 +24,4 @@ public class TwitterError extends Throwable {
 	public String getErrorType() {
 		return mErrorType;
 	}
-
 }

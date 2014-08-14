@@ -35,8 +35,6 @@ import java.io.IOException;
 import java.io.StringReader;
 import java.util.HashMap;
 
-//import com.android.internal.util.XmlUtils;
-
 /**
  * This class processes HTML strings into displayable styled text.
  * Not all HTML tags are supported.
@@ -363,7 +361,7 @@ public class Html {
 
                 out.append(' ');
             } else {*/
-                out.append(c);
+            out.append(c);
             //}
         }
     }

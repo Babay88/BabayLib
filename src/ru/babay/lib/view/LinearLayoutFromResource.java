@@ -3,8 +3,8 @@ package ru.babay.lib.view;
 import android.content.Context;
 import android.util.AttributeSet;
 import android.view.View;
+import android.view.ViewGroup;
 import android.widget.LinearLayout;
-import ru.babay.lib.util.FontUtil;
 
 /**
  * Created with IntelliJ IDEA.
@@ -24,18 +24,19 @@ public abstract class LinearLayoutFromResource extends LinearLayout {
 
     protected abstract void sharedConstructor(AttributeSet attrs);
 
-    protected void setContent(int id){
-        LinearLayout source = (LinearLayout)inflate(getContext(), id, null);
+    protected void setContent(int resourceId){
+        LinearLayout source = (LinearLayout)inflate(getContext(), resourceId, null);
         View v;
         while (source.getChildCount() > 0) {
             v = source.getChildAt(0);
+            ViewGroup.LayoutParams lp = v.getLayoutParams();
             source.removeView(v);
-            addView(v);
+            addView(v, lp);
         }
         if (source.getBackground() != null)
             setBackgroundDrawable(source.getBackground());
         setPadding(source.getPaddingLeft(), source.getPaddingTop(), source.getPaddingRight(), source.getPaddingRight());
         setOrientation(source.getOrientation());
-        FontUtil.applyFont(this);
     }
+
 }

@@ -19,7 +19,6 @@ import android.text.method.LinkMovementMethod;
 import android.text.method.Touch;
 import android.text.style.*;
 import android.util.AttributeSet;
-import android.util.Log;
 import android.view.MotionEvent;
 import android.view.View;
 import android.widget.TextView;
@@ -27,8 +26,8 @@ import org.xml.sax.Attributes;
 import org.xml.sax.XMLReader;
 import ru.babay.lib.BugHandler;
 import ru.babay.lib.R;
-import ru.babay.lib.Settings;
 import ru.babay.lib.model.Image;
+import ru.babay.lib.transport.CachedFile;
 import ru.babay.lib.transport.ImageCache;
 import ru.babay.lib.transport.TTL;
 import ru.babay.lib.util.Html;
@@ -38,7 +37,6 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -73,11 +71,9 @@ public class HtmlViewFixTouchConsume extends TextView {
     int openEditedCommentDivCounter = 0;
     int openEditedCommentDivStartPos = 0;
     ArrayList<AddSpanInfo> addSpanInfo;
-    int imagesToLoad;
-    long lastUpdated;
-    long lastLoaded;
-    volatile boolean updatePosted;
-    final Object updateSync = new Object();
+    final ArrayList<CachedFile> downloaders = new ArrayList<CachedFile>();
+    boolean isAttachedToWindow;
+    private Object strBuilderSync = new Object();
 
     public HtmlViewFixTouchConsume(Context context) {
         super(context);
@@ -138,6 +134,24 @@ public class HtmlViewFixTouchConsume extends TextView {
         super.onMeasure(widthMeasureSpec, heightMeasureSpec);
     }
 
+    public void stopLoading() {
+        synchronized (downloaders) {
+            for (CachedFile cachedFile : downloaders)
+                cachedFile.abort();
+            downloaders.clear();
+        }
+    }
+
+    void postDelayedStopLoading() {
+        handler.postDelayed(new Runnable() {
+            @Override
+            public void run() {
+                if (!isAttachedToWindow)
+                    stopLoading();
+            }
+        }, 3000);
+    }
+
     @Override
     public boolean onTouchEvent(MotionEvent event) {
         linkHit = false;
@@ -157,6 +171,7 @@ public class HtmlViewFixTouchConsume extends TextView {
     }
 
     public void setTextViewHTML(String html, boolean downloadImages) {
+        stopLoading();
         iframeInfoMap = null;
         imgInfoList.clear();
         html = html.replaceAll("[\\n\\r]", "");
@@ -165,35 +180,38 @@ public class HtmlViewFixTouchConsume extends TextView {
         }
         mHtml = Utils.bbcode(html);
 
-        CharSequence sequence = ru.babay.lib.util.Html.fromHtml(mHtml, getContext(), null, new TagHandler(), urlHandler);
+        CharSequence sequence = ru.babay.lib.util.Html.fromHtml(mHtml, getContext(), null, new VideoTagHandler(), urlHandler);
 
-        strBuilder = new SpannableStringBuilder(sequence);
-        if (addSpanInfo != null) {
-            for (int i = 0; i < addSpanInfo.size(); i++) {
-                AddSpanInfo s = addSpanInfo.get(i);
-                strBuilder.setSpan(s.span, s.start, s.end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
-            }
-            addSpanInfo = null;
-        }
-
-        try {
-            if (replaceMore) {
-                Matcher matcher = morePattern.matcher(sequence);
-                if (matcher.find()) {
-                    int start = matcher.start();
-                    int end = matcher.end();
-                    ForegroundColorSpan span = new ForegroundColorSpan(Color.BLUE);
-                    strBuilder.setSpan(span, start, end, Spannable.SPAN_INCLUSIVE_INCLUSIVE);
-                    String moreText = matcher.group(1);
-                    strBuilder.replace(start, end, moreText);
+        synchronized (strBuilderSync) {
+            strBuilder = new SpannableStringBuilder(sequence);
+            if (addSpanInfo != null) {
+                for (int i = 0; i < addSpanInfo.size(); i++) {
+                    AddSpanInfo s = addSpanInfo.get(i);
+                    if (s.start >= 0 && s.end < strBuilder.length())
+                        strBuilder.setSpan(s.span, s.start, s.end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
                 }
-
+                addSpanInfo = null;
             }
-        } catch (Exception e) {
-            BugHandler.logD(e);
-        }
 
-        setText(strBuilder);
+            try {
+                if (replaceMore) {
+                    Matcher matcher = morePattern.matcher(sequence);
+                    if (matcher.find()) {
+                        int start = matcher.start();
+                        int end = matcher.end();
+                        ForegroundColorSpan span = new ForegroundColorSpan(Color.BLUE);
+                        strBuilder.setSpan(span, start, end, Spannable.SPAN_INCLUSIVE_INCLUSIVE);
+                        String moreText = matcher.group(1);
+                        strBuilder.replace(start, end, moreText);
+                    }
+
+                }
+            } catch (Exception e) {
+                BugHandler.logD(e);
+            }
+
+            setText(strBuilder);
+        }
     }
 
     private HandledUrlSpan.UrlHandler urlHandler = new HandledUrlSpan.UrlHandler() {
@@ -229,7 +247,7 @@ public class HtmlViewFixTouchConsume extends TextView {
         }
     };
 
-    private class TagHandler implements Html.TagHandler {
+    private class VideoTagHandler implements Html.TagHandler {
 
         @Override
         public boolean handleTag(boolean opening, String tag, Editable output, Attributes attributes, XMLReader xmlReader) {
@@ -260,10 +278,13 @@ public class HtmlViewFixTouchConsume extends TextView {
     }
 
     boolean parseImageTag2(Attributes attributes, Editable output) {
-        if (attributes == null || attributes.getValue("", "src") == null)
+        if (attributes == null)
             return false;
 
         String source = attributes.getValue("", "src");
+        if (source == null || source.length() == 0)
+            return false;
+
         final String src = source.substring(0, 1).equals("/") ? defImageServer + source : source;
 
         String alt = attributes.getValue("", "alt");
@@ -287,9 +308,11 @@ public class HtmlViewFixTouchConsume extends TextView {
         if (size != null) {
             if (size.x < 100 & size.y < 100) { // image is small - load it now
                 bm = ImageCache.getImage(getContext(), src, TTL.TwoDays);
-                info.imageDrawable = Utils.makeDrawableFromBitmap(getContext(), bm, maxImageWidth);
-                setImageSpan(info, info.imageDrawable, output);
-                return true;
+                if (bm != null) {
+                    info.imageDrawable = Utils.makeDrawableFromBitmap(getContext(), bm, maxImageWidth);
+                    setImageSpan(info, info.imageDrawable, output);
+                    return true;
+                }
             }
             Drawable dr = new ColorDrawable(Color.argb(0, 0, 0, 0));
             Point p = Utils.getSizeForImage(size.x, size.y, getContext(), maxImageWidth);
@@ -315,61 +338,48 @@ public class HtmlViewFixTouchConsume extends TextView {
             setImageSpan(info, dr, output);
         }
 
-        ImageCache.loadImage(getContext(), src, TTL.TwoDays, maxImageWidth, useExternalStorage, new ImageCache.BitmapReceiver() {
+        CachedFile cachedFile = ImageCache.loadImage(getContext(), src, TTL.TwoDays, maxImageWidth, useExternalStorage, new ImageCache.BitmapReceiver() {
             @Override
-            public void onBitmapReceived(Bitmap bm) {
+            public void onBitmapReceived(Bitmap bm, CachedFile downloader) {
+                synchronized (downloaders) {
+                    downloaders.remove(downloader);
+                }
                 info.imageDrawable = Utils.makeDrawableFromBitmap(getContext(), bm, maxImageWidth);
                 handler.post(new Runnable() {
                     @Override
                     public void run() {
-                        setImageSpan(info, info.imageDrawable, strBuilder);
-                        imagesToLoad--;
-                        postUpdateText();
-                        //setText(strBuilder);
+                        synchronized (strBuilderSync) {
+                            setImageSpan(info, info.imageDrawable, strBuilder);
+                            setText(strBuilder);
+                        }
+
+                        //replaceImageSpan(info.pos, info.len, info.imageDrawable, dummyImageSpan, null);
+                        //addImgSpan(info);
                     }
                 });
             }
 
             @Override
-            public void onFail(Throwable e) {
+            public void onFail(Throwable e, CachedFile downloader) {
+                synchronized (downloaders) {
+                    downloaders.remove(downloader);
+                }
                 handler.post(new Runnable() {
                     @Override
                     public void run() {
                         Drawable dr = new ColorDrawable(Color.argb(128, 128, 0, 0));
                         dr.setBounds(0, 0, 50, 50);
-                        setImageSpan(info, dr, strBuilder);
-                        imagesToLoad--;
-                        postUpdateText();
+                        synchronized (strBuilderSync) {
+                            setImageSpan(info, dr, strBuilder);
+                        }
                     }
                 });
             }
         });
-        imagesToLoad++;
+        synchronized (downloaders) {
+            downloaders.add(cachedFile);
+        }
         return true;
-    }
-
-    void postUpdateText() {
-        lastLoaded = System.currentTimeMillis();
-
-        synchronized (updateSync){
-            if (updatePosted)
-                return;
-        }
-
-        if (!updatePosted) {
-            handler.postDelayed(new Runnable() {
-                @Override
-                public void run() {
-                    synchronized (updateSync) {
-                        updatePosted = false;
-                        //if (lastUpdated + 300 < System.currentTimeMillis()) {
-                        setText(strBuilder);
-                        lastUpdated = System.currentTimeMillis();
-                        //}
-                    }
-                }
-            }, 300);
-        }
     }
 
     void setImageSpan(final ImgInfo info, Drawable dr, Editable output) {
@@ -458,9 +468,12 @@ public class HtmlViewFixTouchConsume extends TextView {
             dr.setBounds(0, 0, maxImageWidth, maxImageWidth * 3 / 4);
             final Object dummySpan = replaceImageSpan(info.pos, info.len, dr, null, output);
 
-            ImageCache.loadImage(getContext(), info.imageSrc, TTL.Day, 0, useExternalStorage, new ImageCache.BitmapReceiver() {
+            CachedFile cachedFile = ImageCache.loadImage(getContext(), info.imageSrc, TTL.Day, 0, new ImageCache.BitmapReceiver() {
                 @Override
-                public void onBitmapReceived(Bitmap bm) {
+                public void onBitmapReceived(Bitmap bm, CachedFile downloader) {
+                    synchronized (downloaders) {
+                        downloaders.remove(downloader);
+                    }
                     info.imageDrawable = new BitmapDrawable(bm);
                     int height = (int) (maxImageWidth / (float) bm.getWidth() * bm.getHeight());
                     info.imageDrawable.setBounds(0, 0, maxImageWidth, height);
@@ -473,11 +486,15 @@ public class HtmlViewFixTouchConsume extends TextView {
                 }
 
                 @Override
-                public void onFail(Throwable e) {
-                    int i = 0;
-                    i++;
+                public void onFail(Throwable e, CachedFile downloader) {
+                    synchronized (downloaders) {
+                        downloaders.remove(downloader);
+                    }
                 }
             });
+            synchronized (downloaders) {
+                downloaders.add(cachedFile);
+            }
             return true;
         }
         return false;
@@ -491,31 +508,33 @@ public class HtmlViewFixTouchConsume extends TextView {
     }
 
     void replaceUrlSpan(int pos, int len, Drawable drawable, final String src, Object oldSpan) {
-        if (strBuilder == null)
-            return;
-        if (pos < 0 || pos + len > strBuilder.length())
-            return;
+        synchronized (strBuilderSync) {
+            if (strBuilder == null)
+                return;
+            if (pos < 0 || pos + len > strBuilder.length())
+                return;
 
-        if (oldSpan != null)
-            strBuilder.removeSpan(oldSpan);
+            if (oldSpan != null)
+                strBuilder.removeSpan(oldSpan);
 
-        FitImageSpan span = new FitImageSpan(drawable);
-        span.fitWidth = true;
-        strBuilder.setSpan(span, pos, pos + len, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE);
-        //URLSpan uSpan = new URLSpan(src);
+            FitImageSpan span = new FitImageSpan(drawable);
+            span.fitWidth = true;
+            strBuilder.setSpan(span, pos, pos + len, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE);
+            //URLSpan uSpan = new URLSpan(src);
 
-        ClickableSpan cSpan = new ClickableSpan() {
-            @Override
-            public void onClick(View widget) {
-                if (contentClickListener != null)
-                    contentClickListener.onVideoClick(HtmlViewFixTouchConsume.this, src);
-                //Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(src));
-                //getContext().startActivity(intent);
-            }
-        };
-        strBuilder.setSpan(cSpan, pos, pos + len, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE);
-        //e.setSpan(uSpan, pos, pos + len, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE);
-        setText(strBuilder);
+            ClickableSpan cSpan = new ClickableSpan() {
+                @Override
+                public void onClick(View widget) {
+                    if (contentClickListener != null)
+                        contentClickListener.onVideoClick(HtmlViewFixTouchConsume.this, src);
+                    //Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(src));
+                    //getContext().startActivity(intent);
+                }
+            };
+            strBuilder.setSpan(cSpan, pos, pos + len, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE);
+            //e.setSpan(uSpan, pos, pos + len, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE);
+            setText(strBuilder);
+        }
     }
 
     ImageSpan replaceImageSpan(int pos, int len, Drawable drawable, Object oldSpan, Editable e) {
@@ -579,10 +598,6 @@ public class HtmlViewFixTouchConsume extends TextView {
                 } else {
                     Selection.removeSelection(buffer);
                     Touch.onTouchEvent(widget, buffer, event);
-                    /*if (widget instanceof HtmlViewFixTouchConsume &&
-                            ((HtmlViewFixTouchConsume) widget).contentClickListener != null) {
-                        ((HtmlViewFixTouchConsume) widget).contentClickListener.onContentClick(widget);
-                    } */
                     return false;
                 }
             } else
@@ -625,6 +640,14 @@ public class HtmlViewFixTouchConsume extends TextView {
         }
     }
 
+    private class FitImageSpan extends ImageSpan {
+        boolean fitWidth;
+
+        private FitImageSpan(Drawable d) {
+            super(d);
+        }
+    }
+
     private static class AddSpanInfo {
         int start, end;
         Object span;
@@ -649,25 +672,26 @@ public class HtmlViewFixTouchConsume extends TextView {
         return null;
     }
 
-    public void setUseExternalStorage(boolean useExternalStorage) {
-        this.useExternalStorage = useExternalStorage;
-    }
-
     public void setContentClickListener(ContentClickListener contentClickListener) {
         this.contentClickListener = contentClickListener;
+    }
+
+    @Override
+    protected void onDetachedFromWindow() {
+        isAttachedToWindow = false;
+        super.onDetachedFromWindow();
+        postDelayedStopLoading();
+    }
+
+    @Override
+    protected void onAttachedToWindow() {
+        isAttachedToWindow = true;
+        super.onAttachedToWindow();
     }
 
     public interface ContentClickListener {
         public void onImageClick(View view, Image image);
 
         public void onVideoClick(View view, String url);
-    }
-
-    private class FitImageSpan extends ImageSpan {
-        boolean fitWidth;
-
-        private FitImageSpan(Drawable d) {
-            super(d);
-        }
     }
 }

@@ -66,7 +66,7 @@ public abstract class MyJsonRequest implements Runnable {
     RequestType mRequestType;
     ResultType mResultType;
     String mRequestBase;
-    String requestDetails;
+    //String requestDetails;
 
     long startTime;
     long endTime;
@@ -157,7 +157,7 @@ public abstract class MyJsonRequest implements Runnable {
             Object result = runSyncPrivate();
             if (!aborted)
                 onSuccess(result);
-        } catch (Exception e) {
+        } catch (Exception e){
             onError(e);
         }
     }
@@ -234,7 +234,7 @@ public abstract class MyJsonRequest implements Runnable {
             else if (!(e instanceof WebRequestException))
                 e = new WebRequestException(e);
             if (debugData != null)
-                ((WebRequestException) e).setRequestData(debugData.toString());
+                ((WebRequestException)e).setRequestData(debugData.toString());
 
             if (logToFile != null) {
                 StringBuilder builder = new StringBuilder();
@@ -248,7 +248,8 @@ public abstract class MyJsonRequest implements Runnable {
             if (aborted) {
                 onAbort();
                 return null;
-            } else
+            }
+            else
                 throw e;
         } finally {
         }
@@ -281,12 +282,9 @@ public abstract class MyJsonRequest implements Runnable {
         request.setHeader("Accept", "application/json");
 
         if (debugData != null) {
-            String debugString = String.format("%s request: %s\n%s\n", mRequestType.toString(), path + paramsToString(params), getHeadersString(request));
+            String debugString = String.format("%s request: %s\n request headers: %s\n", mRequestType.toString(), mHttpRequest.getURI(), getHeadersString(request));
             debugData.append(debugString);
-            requestDetails = path + paramsToString(params);
-
-            if (debug)
-                BugHandler.logD(debugData.toString());
+            BugHandler.logD(debugData.toString());
         }
 
         ResponseHandler responseHandler = new BasicResponseHandler();
@@ -295,7 +293,7 @@ public abstract class MyJsonRequest implements Runnable {
         endTime = System.currentTimeMillis();
         if (debugData != null) {
             debugData.append(String.format("\nresponce time: %d ms, pure: %d ms\n", System.currentTimeMillis() - requestStartTime, endTime - startTime));
-            debugData.append(String.format("%s responce: %s%s\n%s\n", mRequestType.toString(), path, paramsToString(params), responce));
+            debugData.append(String.format("%s responce: %s\n%s\n", mRequestType.toString(), request.getURI(), responce));
         }
 
         done = true;
@@ -305,10 +303,10 @@ public abstract class MyJsonRequest implements Runnable {
         return responce;
     }
 
-    String getHeadersString(HttpRequestBase request) {
+    String getHeadersString(HttpRequestBase request){
         Header[] headers = request.getAllHeaders();
         StringBuilder builder = new StringBuilder();
-        for (int i = 0; i < headers.length; i++) {
+        for (int i=0; i< headers.length; i++){
             builder.append(headers[i].getName());
             builder.append(": ");
             builder.append(headers[i].getValue());
@@ -375,16 +373,10 @@ public abstract class MyJsonRequest implements Runnable {
                 request.setHeader(HTTP.CONTENT_TYPE, "text/plain;charset=UTF-8");
 
             if (debugData != null && jsonParam != null) {
-                debugData.append(String.format("%s request: %s\n%s\n%s\n", mRequestType.toString(), path, getHeadersString(request), jsonParam.toString()));
-                requestDetails = path + "\n" + jsonParam.toString();
-            }
+                debugData.append(String.format("%s request: %s\nheaders: %s\nparams: %s\n", mRequestType.toString(), path, getHeadersString(request), jsonParam.toString()));
+                }
         } else if (file != null || attachInputStream != null) {
-            /*InputStreamEntity reqEntity = new InputStreamEntity(
-                    new FileInputStream(file), -1);
-            reqEntity.setContentType("binary/octet-stream");
-            reqEntity.setChunked(true); // Send in multiple parts if needed
-            request.setEntity(reqEntity);
-*/
+
             MultipartEntity reqEntity = new MultipartEntity(HttpMultipartMode.BROWSER_COMPATIBLE);
             if (params != null)
                 for (NameValuePair param : params)
@@ -396,10 +388,9 @@ public abstract class MyJsonRequest implements Runnable {
 
             if (debugData != null) {
                 debugData.append(String.format("%s send file request: %s\n%s\n", mRequestType.toString(), path, file.getPath()));
-
-                debugData.append(String.format("request: %s %s\n", mRequestType.toString(), path));
                 debugData.append(String.format("requestHeaders: %s\n", getHeadersString(request)));
-            }
+                debugData.append(String.format("attach file as: %s", multipartParamName));
+                }
 
             request.setEntity(reqEntity);
             //request.addHeader("Accept-Encoding", "gzip");
@@ -410,14 +401,11 @@ public abstract class MyJsonRequest implements Runnable {
 
             if (debugData != null) {
                 String paramData = Util.readFully(request.getEntity().getContent());
-                debugData.append(String.format("%s request: %s\n%s\n", mRequestType.toString(), path, paramData));
-                requestDetails = path + "\n" + paramData;
-
                 debugData.append(String.format("request: %s %s", mRequestType.toString(), path));
                 debugData.append(String.format("requestHeaders: %s\n", getHeadersString(request)));
                 debugData.append(String.format("request body %s\n", paramData));
+                }
             }
-        }
 
         HttpClient client = getClient(request.getParams(), request.getURI());
 
@@ -436,7 +424,7 @@ public abstract class MyJsonRequest implements Runnable {
         if (debugData != null) {
             debugData.append(String.format("\nresponce time: %d ms, pure: %d ms\n", System.currentTimeMillis() - requestStartTime, endTime - startTime));
             debugData.append(String.format("%s responce: %s\n%s\n", mRequestType.toString(), path, responce));
-        }
+            }
 
         done = true;
         if (aborted)
@@ -446,7 +434,7 @@ public abstract class MyJsonRequest implements Runnable {
     }
 
     protected HttpRequestBase createHttpRequest(String path, String params) throws URISyntaxException {
-        if (params != null) {
+        if (params != null){
             if (path.contains("?"))
                 path = path + "&";
             else
@@ -494,7 +482,7 @@ public abstract class MyJsonRequest implements Runnable {
         return client;
     }
 
-    void attachGzipCompression(DefaultHttpClient client) {
+    void attachGzipCompression(DefaultHttpClient client){
         client.addRequestInterceptor(new HttpRequestInterceptor() {
 
             public void process(
@@ -633,4 +621,7 @@ public abstract class MyJsonRequest implements Runnable {
         isJsonRequest = requestType == RequestType.Post || requestType == RequestType.Put;
     }
 
+    public void setMultipartParamName(String multipartFileParamName) {
+        this.multipartParamName = multipartFileParamName;
+    }
 }

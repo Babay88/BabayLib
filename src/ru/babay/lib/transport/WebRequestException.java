@@ -1,5 +1,7 @@
 package ru.babay.lib.transport;
 
+import java.util.HashMap;
+
 /**
  * Created with IntelliJ IDEA.
  * User: babay
@@ -7,8 +9,9 @@ package ru.babay.lib.transport;
  * Time: 15:07
  */
 public class WebRequestException extends Exception {
-    int errorCode;
-    String requestData;
+    protected int errorCode;
+    protected String requestData;
+    HashMap<String, String> debugDataMap;
 
     public WebRequestException(String detailMessage, int errorCode) {
         super(detailMessage);
@@ -38,6 +41,27 @@ public class WebRequestException extends Exception {
 
     public void setRequestData(String requestData) {
         this.requestData = requestData;
+    }
+
+    public HashMap<String, String> getDebugDataMap() {
+        return debugDataMap;
+    }
+
+    public String getDebugData(){
+        if (debugDataMap == null)
+            return "";
+        StringBuilder builder = new StringBuilder();
+        for (String key: debugDataMap.keySet()){
+            builder.append(key);
+            builder.append(": ");
+            builder.append(debugDataMap.get(key));
+            builder.append("\n");
+        }
+        return builder.toString();
+    }
+
+    public void setDebugDataMap(HashMap<String, String> debugDataMap) {
+        this.debugDataMap = debugDataMap;
     }
 }
 

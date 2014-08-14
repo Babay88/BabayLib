@@ -32,46 +32,51 @@ import java.util.regex.Pattern;
  */
 public class Utils {
     //private static Map<Pattern,String> patternMap = new HashMap<Pattern , String>();
-    private static List<Pair<Pattern, String>>  patternList = new ArrayList<Pair<Pattern, String>>();
+    private static final List<Pair<Pattern, String>> patternList = new ArrayList<Pair<Pattern, String>>();
 
-    public static void preparePatterns(){
+    public static void preparePatterns() {
         if (patternList.size() != 0)
             return;
 
-        //Map<String,String> bbMap = new HashMap<String , String>();
-        List<Pair<String, String>> bbList = new ArrayList<Pair<String, String>>();
+        synchronized (patternList) {
+            if (patternList.size() != 0)
+                return;
 
-        //Pattern.compile("\\[b\\]([\\s\\S]+?)\\[\\/b\\]")
-        bbList.add(new Pair<String, String>("(\r\n|\r|\n|\n\r)", "<br/>"));
-        bbList.add(new Pair<String, String>("(?i)\\[b\\]([\\s\\S]+?)\\[\\/b\\]", "<strong>$1</strong>"));
-        bbList.add(new Pair<String, String>("(?i)\\[i\\]([\\s\\S]+?)\\[\\/i\\]", "<span style='font-style:italic;'>$1</span>"));
-        bbList.add(new Pair<String, String>("(?i)\\[u\\]([\\s\\S]+?)\\[\\/u\\]", "<span style='text-decoration:underline;'>$1</span>"));
-        bbList.add(new Pair<String, String>("(?i)\\[h1\\]([\\s\\S]+?)\\[\\/h1\\]", "<h1>$1</h1>"));
-        bbList.add(new Pair<String, String>("(?i)\\[h2\\]([\\s\\S]+?)\\[\\/h2\\]", "<h2>$1</h2>"));
-        //bbList.add(new Pair<String, String>("(?i)\\[h3\\]([\\s\\S]+?)\\[\\/h3\\]", "<h3>$1</h3>"));
-        //bbList.add(new Pair<String, String>("(?i)\\[h4\\]([\\s\\S]+?)\\[\\/h4\\]", "<h4>$1</h4>"));
-        //bbList.add(new Pair<String, String>("(?i)\\[h5\\]([\\s\\S]+?)\\[\\/h5\\]", "<h5>$1</h5>"));
-        //bbList.add(new Pair<String, String>("(?i)\\[h6\\]([\\s\\S]+?)\\[\\/h6\\]", "<h6>$1</h6>"));
-        bbList.add(new Pair<String, String>("(?i)\\[quote\\]([\\s\\S]+?)\\[\\/quote\\]", "<blockquote>$1</blockquote>"));
-        bbList.add(new Pair<String, String>("(?i)\\[p\\]([\\s\\S]+?)\\[\\/p\\]", "<p>$1</p>"));
-        //bbList.add(new Pair<String, String>("(?i)\\[p=([\\s\\S]+?),([\\s\\S]+?)\\]([\\s\\S]+?)\\[\\/p\\]", "<p style='text-indent:$1px;line-height:$2%;'>$3</p>"));
-        //bbList.add(new Pair<String, String>("(?i)\\[center\\]([\\s\\S]+?)\\[\\/center\\]", "<div align='center'>$1"));
-        //bbList.add(new Pair<String, String>("(?i)\\[align=([\\s\\S]+?)\\](.+?)\\[\\/align\\]", "<div align='$1'>$2"));
-        bbList.add(new Pair<String, String>("(?i)\\[color=([\\s\\S]+?)\\](.+?)\\[\\/color\\]", "<span style='color:$1;'>$2</span>"));
-        bbList.add(new Pair<String, String>("(?i)\\[size=([\\s\\S]+?)\\](.+?)\\[\\/size\\]", "<span style='font-size:$1;'>$2</span>"));
-        bbList.add(new Pair<String, String>("(?i)\\[img\\]([\\s\\S]+?)\\[\\/img\\]", "<img src='$1' />"));
-        bbList.add(new Pair<String, String>("(?i)\\[img=(.+?),(.+?)\\]([\\s\\S]+?)\\[\\/img\\]", "<img width='$1' height='$2' src='$3' />"));
-        //bbList.add(new Pair<String, String>("(?i)\\[email\\](.+?)\\[\\/email\\]", "<a href='mailto:$1'>$1</a>"));
-        //bbList.add(new Pair<String, String>("(?i)\\[email=(.+?)\\](.+?)\\[\\/email\\]", "<a href='mailto:$1'>$2</a>"));
-        bbList.add(new Pair<String, String>("(?i)\\[url\\](.+?)\\[\\/url\\]", "<a href='$1'>$1</a>"));
-        bbList.add(new Pair<String, String>("(?i)\\[url=\"(.+?)\"\\](.+?)\\[\\/url\\]", "<a href='$1'>$2</a>"));
-        bbList.add(new Pair<String, String>("(?i)\\[url=(.+?)\\](.+?)\\[\\/url\\]", "<a href='$1'>$2</a>"));
-        bbList.add(new Pair<String, String>("(?i)\\[youtube\\](.+?)\\[\\/youtube\\]", "<object width='640' height='380'><param name='movie' value='http://www.youtube.com/v/$1'></param><embed src='http://www.youtube.com/v/$1' type='application/x-shockwave-flash' width='640' height='380'></embed></object>"));
-        bbList.add(new Pair<String, String>("(?i)\\[video\\](.+?)\\[\\/video\\]", "<video src='$1' />"));
+            //Map<String,String> bbMap = new HashMap<String , String>();
+            List<Pair<String, String>> bbList = new ArrayList<Pair<String, String>>();
 
-        for (Pair<String, String> entry: bbList) {
-            patternList.add(new Pair<Pattern, String>(Pattern.compile(entry.first), entry.second));
-            //patternMap.put(Pattern.compile(entry.getKey().toString()), entry.getValue().toString());
+            //Pattern.compile("\\[b\\]([\\s\\S]+?)\\[\\/b\\]")
+            bbList.add(new Pair<String, String>("(\r\n|\r|\n|\n\r)", "<br/>"));
+            bbList.add(new Pair<String, String>("(?i)\\[b\\]([\\s\\S]+?)\\[\\/b\\]", "<strong>$1</strong>"));
+            bbList.add(new Pair<String, String>("(?i)\\[i\\]([\\s\\S]+?)\\[\\/i\\]", "<span style='font-style:italic;'>$1</span>"));
+            bbList.add(new Pair<String, String>("(?i)\\[u\\]([\\s\\S]+?)\\[\\/u\\]", "<span style='text-decoration:underline;'>$1</span>"));
+            bbList.add(new Pair<String, String>("(?i)\\[h1\\]([\\s\\S]+?)\\[\\/h1\\]", "<h1>$1</h1>"));
+            bbList.add(new Pair<String, String>("(?i)\\[h2\\]([\\s\\S]+?)\\[\\/h2\\]", "<h2>$1</h2>"));
+            //bbList.add(new Pair<String, String>("(?i)\\[h3\\]([\\s\\S]+?)\\[\\/h3\\]", "<h3>$1</h3>"));
+            //bbList.add(new Pair<String, String>("(?i)\\[h4\\]([\\s\\S]+?)\\[\\/h4\\]", "<h4>$1</h4>"));
+            //bbList.add(new Pair<String, String>("(?i)\\[h5\\]([\\s\\S]+?)\\[\\/h5\\]", "<h5>$1</h5>"));
+            //bbList.add(new Pair<String, String>("(?i)\\[h6\\]([\\s\\S]+?)\\[\\/h6\\]", "<h6>$1</h6>"));
+            bbList.add(new Pair<String, String>("(?i)\\[quote\\]([\\s\\S]+?)\\[\\/quote\\]", "<blockquote>$1</blockquote>"));
+            bbList.add(new Pair<String, String>("(?i)\\[p\\]([\\s\\S]+?)\\[\\/p\\]", "<p>$1</p>"));
+            //bbList.add(new Pair<String, String>("(?i)\\[p=([\\s\\S]+?),([\\s\\S]+?)\\]([\\s\\S]+?)\\[\\/p\\]", "<p style='text-indent:$1px;line-height:$2%;'>$3</p>"));
+            //bbList.add(new Pair<String, String>("(?i)\\[center\\]([\\s\\S]+?)\\[\\/center\\]", "<div align='center'>$1"));
+            //bbList.add(new Pair<String, String>("(?i)\\[align=([\\s\\S]+?)\\](.+?)\\[\\/align\\]", "<div align='$1'>$2"));
+            bbList.add(new Pair<String, String>("(?i)\\[color=([\\s\\S]+?)\\](.+?)\\[\\/color\\]", "<span style='color:$1;'>$2</span>"));
+            bbList.add(new Pair<String, String>("(?i)\\[size=([\\s\\S]+?)\\](.+?)\\[\\/size\\]", "<span style='font-size:$1;'>$2</span>"));
+            bbList.add(new Pair<String, String>("(?i)\\[img\\]([\\s\\S]+?)\\[\\/img\\]", "<img src='$1' />"));
+            bbList.add(new Pair<String, String>("(?i)\\[img=(.+?),(.+?)\\]([\\s\\S]+?)\\[\\/img\\]", "<img width='$1' height='$2' src='$3' />"));
+            //bbList.add(new Pair<String, String>("(?i)\\[email\\](.+?)\\[\\/email\\]", "<a href='mailto:$1'>$1</a>"));
+            //bbList.add(new Pair<String, String>("(?i)\\[email=(.+?)\\](.+?)\\[\\/email\\]", "<a href='mailto:$1'>$2</a>"));
+            bbList.add(new Pair<String, String>("(?i)\\[url\\](.+?)\\[\\/url\\]", "<a href='$1'>$1</a>"));
+            bbList.add(new Pair<String, String>("(?i)\\[url=\"(.+?)\"\\](.+?)\\[\\/url\\]", "<a href='$1'>$2</a>"));
+            bbList.add(new Pair<String, String>("(?i)\\[url=(.+?)\\](.+?)\\[\\/url\\]", "<a href='$1'>$2</a>"));
+            bbList.add(new Pair<String, String>("(?i)\\[youtube\\](.+?)\\[\\/youtube\\]", "<object width='640' height='380'><param name='movie' value='http://www.youtube.com/v/$1'></param><embed src='http://www.youtube.com/v/$1' type='application/x-shockwave-flash' width='640' height='380'></embed></object>"));
+            bbList.add(new Pair<String, String>("(?i)\\[video\\](.+?)\\[\\/video\\]", "<video src='$1' />"));
+
+            for (Pair<String, String> entry : bbList) {
+                patternList.add(new Pair<Pattern, String>(Pattern.compile(entry.first), entry.second));
+                //patternMap.put(Pattern.compile(entry.getKey().toString()), entry.getValue().toString());
+            }
         }
     }
 
@@ -79,16 +84,15 @@ public class Utils {
         String html = text;
         preparePatterns();
 
-
-        for (Pair<Pattern, String> entry : patternList) {
+        for (int i=0; i< patternList.size(); i++){
+            Pair<Pattern, String> entry = patternList.get(i);
             html = entry.first.matcher(html).replaceAll(entry.second);
-            //html = html.replaceAll(entry.getKey().toString(), entry.getValue().toString());
         }
 
         return html;
     }
 
-    public static Map<String, String> parseTagAttribs(XMLReader xmlReader){
+    public static Map<String, String> parseTagAttribs(XMLReader xmlReader) {
         try {
             Field elementField = xmlReader.getClass().getDeclaredField("theNewElement");
             elementField.setAccessible(true);
@@ -98,13 +102,13 @@ public class Utils {
             Object atts = attsField.get(element);
             Field dataField = atts.getClass().getDeclaredField("data");
             dataField.setAccessible(true);
-            String[] data = (String[])dataField.get(atts);
+            String[] data = (String[]) dataField.get(atts);
             Field lengthField = atts.getClass().getDeclaredField("length");
             lengthField.setAccessible(true);
-            int len = (Integer)lengthField.get(atts);
+            int len = (Integer) lengthField.get(atts);
 
             Map<String, String> params = new HashMap<String, String>();
-            for(int i = 0; i < len; i++) {
+            for (int i = 0; i < len; i++) {
                 params.put(data[i * 5 + 1], data[i * 5 + 4]);
                     /*if("attrA".equals(data[i * 5 + 1])) {
                         myAttributeA = data[i * 5 + 4];
@@ -143,7 +147,7 @@ public class Utils {
     }
 
 
-    public static Drawable makeDrawableFromBitmap(Context context, Bitmap bm, int maxWidth){
+    public static Drawable makeDrawableFromBitmap(Context context, Bitmap bm, int maxWidth) {
         /*float sizeMult = context.getResources().getDisplayMetrics().density * 1.5f;
         if (maxWidth != 0 && bm.getWidth() >= maxWidth / sizeMult)
             sizeMult = context.getResources().getDisplayMetrics().density;*/
@@ -153,12 +157,12 @@ public class Utils {
         return d;
     }
 
-    public static Point getSizeForImage(int width, int height, Context context, int maxWidth){
-        float sizeMult = context.getResources().getDisplayMetrics().density ;
+    public static Point getSizeForImage(int width, int height, Context context, int maxWidth) {
+        float sizeMult = context.getResources().getDisplayMetrics().density;
         //if (maxWidth != 0 && width >= maxWidth / sizeMult)
         //    sizeMult = context.getResources().getDisplayMetrics().density;
         if (maxWidth != 0 && width * sizeMult > maxWidth)
-            sizeMult = maxWidth / (float)width;
+            sizeMult = maxWidth / (float) width;
 
         return new Point((int) (sizeMult * width), (int) (sizeMult * height));
     }
@@ -192,10 +196,10 @@ public class Utils {
         }
     }
 
-    public static String firstNWords(String source, final int n){
+    public static String firstNWords(String source, final int n) {
         int pos = 0;
-        for (int i=0; i<n; i++){
-            pos = source.indexOf(" ", pos+1);
+        for (int i = 0; i < n; i++) {
+            pos = source.indexOf(" ", pos + 1);
             if (pos == -1)
                 return source;
         }
